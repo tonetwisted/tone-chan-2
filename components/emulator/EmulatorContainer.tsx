@@ -64,10 +64,6 @@ export default function EmulatorContainer() {
 
     if (idx !== undefined && gm?.simulateInput) {
       gm.simulateInput(0, idx, val);
-      // A and B also send Start so they advance title screens and dialog boxes
-      if (btn === "A" || btn === "B") {
-        gm.simulateInput(0, BTN_TO_INDEX.Start, val);
-      }
     }
   }, []);
 
