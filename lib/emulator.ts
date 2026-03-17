@@ -57,7 +57,11 @@ export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
   const w = window as unknown as Record<string, unknown>;
   w.EJS_player          = `#${opts.containerId}`;
   w.EJS_gameName        = "Tone Chan Adventures";
-  w.EJS_gameUrl         = opts.romPath;
+  // Must be an absolute URL — EmulatorJS CDN iframe resolves relative paths
+  // against cdn.emulatorjs.org, not our site.
+  w.EJS_gameUrl         = opts.romPath.startsWith("http")
+    ? opts.romPath
+    : `${window.location.origin}${opts.romPath}`;
   w.EJS_core            = cfg.core;
   // Use CDN — no local install required.
   // Swap to "/emulatorjs/data/" if you self-host later.
