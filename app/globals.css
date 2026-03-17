@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Fonts ─────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+:root {
+  --tc-black:   #050508;
+  --tc-dark:    #0d0a1a;
+  --tc-purple:  #7B2FBE;
+  --tc-violet:  #3A0CA3;
+  --tc-pink:    #FF006E;
+  --tc-cyan:    #4CC9F0;
+  --tc-gold:    #F7B731;
+  --tc-cream:   #F5F0E8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--tc-black);
+  color: var(--tc-cream);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Custom scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--tc-black);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--tc-purple);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--tc-pink);
+}
+
+/* ── Selection ────────────────────────────────────────────────────────────── */
+::selection {
+  background: var(--tc-pink);
+  color: white;
+}
+
+/* ── Shimmer animation (for play button) ─────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ── Pixel font helper ────────────────────────────────────────────────────── */
+.font-pixel {
+  font-family: 'Press Start 2P', monospace;
+  image-rendering: pixelated;
+}
+
+/* ── Scanline utility ─────────────────────────────────────────────────────── */
+.scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+/* ── CRT glow ─────────────────────────────────────────────────────────────── */
+.crt-glow {
+  filter: drop-shadow(0 0 6px rgba(76, 201, 240, 0.4));
+}
+
+/* ── Pixel border ─────────────────────────────────────────────────────────── */
+.pixel-border {
+  border: 2px solid var(--tc-purple);
+  box-shadow:
+    2px 0 0 0 var(--tc-purple),
+    -2px 0 0 0 var(--tc-purple),
+    0 2px 0 0 var(--tc-purple),
+    0 -2px 0 0 var(--tc-purple);
+}
+
+/* ── EmulatorJS overrides ─────────────────────────────────────────────────── */
+#ejs-player {
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+}
+
+#ejs-player canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+
+/* ── Focus styles ─────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--tc-cyan);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
