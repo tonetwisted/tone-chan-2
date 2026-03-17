@@ -29,6 +29,12 @@ const BTN_TO_INDEX: Record<string, number> = {
   R:      11,
 };
 
+// Button → keyboard key for event dispatch fallback
+const BTN_TO_KEY: Record<string, string> = {
+  Up: "ArrowUp", Down: "ArrowDown", Left: "ArrowLeft", Right: "ArrowRight",
+  A: "x", B: "z", Start: "Enter", Select: "Backspace", L: "a", R: "s",
+};
+
 // Physical key → button name (for visual highlight only)
 const KEY_TO_BTN: Record<string, string> = {
   ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right",
@@ -48,16 +54,39 @@ export default function EmulatorContainer() {
 
   useEffect(() => { setIsMobile(isMobileDevice()); }, []);
 
-  // Use EmulatorJS simulateInput API with libretro button indices.
-  // This works even when EmulatorJS renders inside an iframe.
   const fireButton = useCallback((btn: string, down: boolean) => {
-    const idx = BTN_TO_INDEX[btn];
-    if (idx === undefined) return;
+    const type = down ? "keydown" : "keyup";
+
+    // Method 1: simulateInput API (works across iframes)
     const w = window as unknown as Record<string, unknown>;
     const ejs = w.EJS_emulator as
       | { simulateInput?: (player: number, button: number, value: number) => void }
       | undefined;
-    ejs?.simulateInput?.(0, idx, down ? 1 : 0);
+    const idx = BTN_TO_INDEX[btn];
+    if (idx !== undefined) ejs?.simulateInput?.(0, idx, down ? 1 : 0);
+
+    // Method 2: keyboard events on window + all iframes (fallback)
+    const key = BTN_TO_KEY[btn];
+    if (key) {
+      const opts = { key, bubbles: true, cancelable: true };
+      window.dispatchEvent(new KeyboardEvent(type, opts));
+      document.querySelectorAll<HTMLIFrameElement>("iframe").forEach((f) => {
+        try { f.contentWindow?.dispatchEvent(new KeyboardEvent(type, opts)); } catch { /* cross-origin */ }
+      });
+    }
+
+    // A and B also fire Enter so they advance title screens and dialog
+    if ((btn === "A" || btn === "B") && down) {
+      ejs?.simulateInput?.(0, BTN_TO_INDEX.Start, 1);
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      document.querySelectorAll<HTMLIFrameElement>("iframe").forEach((f) => {
+        try { f.contentWindow?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); } catch { /* cross-origin */ }
+      });
+    }
+    if ((btn === "A" || btn === "B") && !down) {
+      ejs?.simulateInput?.(0, BTN_TO_INDEX.Start, 0);
+      window.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+    }
   }, []);
 
   // Touch/on-screen button press
