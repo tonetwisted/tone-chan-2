@@ -34,7 +34,7 @@ export default function Hero() {
         }}
       />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center py-24">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center py-20 sm:py-28">
         {/* Genre badge */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}
@@ -102,12 +102,12 @@ export default function Hero() {
             PLAY FREE DEMO
           </Link>
 
-          <Link
-            href="/about"
+          <a
+            href="#lore"
             className="flex items-center gap-2 px-8 py-4 rounded-lg font-pixel text-xs text-tc-cream/70 border border-white/10 hover:border-tc-purple/50 hover:text-tc-cream hover:bg-white/5 transition-all duration-300"
           >
             EXPLORE LORE →
-          </Link>
+          </a>
         </motion.div>
 
         {/* Stats bar */}
@@ -115,7 +115,7 @@ export default function Hero() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.7 }}
-          className="flex flex-wrap items-center justify-center gap-8 mt-16 pt-10 border-t border-white/5"
+          className="flex flex-wrap items-center justify-center gap-5 sm:gap-8 mt-10 sm:mt-16 pt-8 sm:pt-10 border-t border-white/5"
         >
           {[
             { label: "PLATFORM", value: "Game Boy Advance" },

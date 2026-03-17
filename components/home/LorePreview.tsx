@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { LORE_BLOCKS } from "@/lib/content";
 
@@ -8,7 +7,7 @@ export default function LorePreview() {
   const blocks = LORE_BLOCKS.slice(0, 2);
 
   return (
-    <section className="py-24 bg-tc-black relative overflow-hidden">
+    <section id="lore" className="py-24 bg-tc-black relative overflow-hidden">
       {/* Purple side glow */}
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-64 h-64 rounded-full opacity-10 blur-3xl"
         style={{ background: "#7B2FBE" }} />
@@ -40,14 +39,6 @@ export default function LorePreview() {
           ))}
         </div>
 
-        <div className="text-center">
-          <Link
-            href="/about"
-            className="inline-flex items-center gap-2 font-pixel text-[9px] text-tc-cyan/70 hover:text-tc-cyan tracking-widest transition-colors duration-200"
-          >
-            READ FULL LORE →
-          </Link>
-        </div>
       </div>
     </section>
   );

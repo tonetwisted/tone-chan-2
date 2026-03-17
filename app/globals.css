@@ -122,6 +122,11 @@ body {
   border-radius: 4px;
 }
 
+/* ── Safe area bottom padding (iPhone notch / home indicator) ────────────── */
+.pb-safe {
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+}
+
 /* ── Reduced motion ───────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

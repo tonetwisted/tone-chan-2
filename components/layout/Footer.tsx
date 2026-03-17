@@ -1,12 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { SOCIAL_LINKS, NAV_LINKS, GAME_META } from "@/lib/content";
+import { SOCIAL_LINKS, GAME_META } from "@/lib/content";
 
 const FOOTER_LINKS = [
-  { label: "Home",      href: "/" },
-  ...NAV_LINKS,
-  { label: "Press Kit", href: "/press" },
+  { label: "Home", href: "/" },
+  { label: "Play Demo", href: "/play" },
 ];
 
 const ICON_SVG: Record<string, string> = {
@@ -20,9 +20,11 @@ const ICON_SVG: Record<string, string> = {
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   return (
-    <footer className="bg-tc-black border-t border-tc-purple/20 pt-16 pb-8">
+    <footer className="bg-tc-black border-t border-tc-purple/20 pt-12 sm:pt-16 pb-8 pb-safe">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Top grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
@@ -73,33 +75,53 @@ export default function Footer() {
             <p className="text-tc-cream/50 text-sm mb-4">
               Get early access drops, exclusive content, and updates on new chapters.
             </p>
-            <form
-              onSubmit={(e) => e.preventDefault()}
-              className="flex flex-col gap-2"
-            >
-              <input
-                type="email"
-                placeholder="your@email.com"
-                className="w-full px-4 py-2 bg-white/5 border border-tc-purple/30 rounded text-tc-cream text-sm placeholder-tc-cream/30 focus:outline-none focus:border-tc-pink transition-colors duration-200"
-              />
-              <button
-                type="submit"
-                className="w-full px-4 py-2 bg-tc-pink text-white font-pixel text-[9px] tracking-wider rounded hover:bg-tc-pink/80 transition-colors duration-200"
+            {status === "success" ? (
+              <p className="font-pixel text-[8px] text-tc-cyan tracking-widest">YOU&apos;RE IN THE CREW ✓</p>
+            ) : (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!email) return;
+                  setStatus("loading");
+                  try {
+                    const res = await fetch("/api/newsletter", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email, source: "footer" }),
+                    });
+                    setStatus(res.ok ? "success" : "error");
+                  } catch {
+                    setStatus("error");
+                  }
+                }}
+                className="flex flex-col gap-2"
               >
-                SUBSCRIBE
-              </button>
-            </form>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                  className="w-full px-4 py-2 bg-white/5 border border-tc-purple/30 rounded text-tc-cream text-sm placeholder-tc-cream/30 focus:outline-none focus:border-tc-pink transition-colors duration-200"
+                />
+                <button
+                  type="submit"
+                  disabled={status === "loading"}
+                  className="w-full px-4 py-2 bg-tc-pink text-white font-pixel text-[9px] tracking-wider rounded hover:bg-tc-pink/80 disabled:opacity-50 transition-colors duration-200"
+                >
+                  {status === "loading" ? "..." : "SUBSCRIBE"}
+                </button>
+                {status === "error" && (
+                  <p className="text-tc-pink/70 text-xs">Something went wrong. Try again.</p>
+                )}
+              </form>
+            )}
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-tc-cream/30 text-xs">
+        <div className="border-t border-white/5 pt-6 text-center text-tc-cream/30 text-xs">
           <span>© {year} Tone Chan Studios. All rights reserved.</span>
-          <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-tc-cream/60 transition-colors">Privacy</Link>
-            <Link href="/terms"   className="hover:text-tc-cream/60 transition-colors">Terms</Link>
-            <Link href="/press"   className="hover:text-tc-cream/60 transition-colors">Press</Link>
-          </div>
         </div>
       </div>
     </footer>

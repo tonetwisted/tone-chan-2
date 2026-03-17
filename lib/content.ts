@@ -130,8 +130,5 @@ export const SOCIAL_LINKS: SocialLink[] = [
 
 // ─── Navigation Links ─────────────────────────────────────────────────────────
 export const NAV_LINKS = [
-  { label: "Play",      href: "/play" },
-  { label: "About",     href: "/about" },
-  { label: "Gallery",   href: "/gallery" },
-  { label: "Community", href: "/community" },
+  { label: "Play", href: "/play" },
 ];
