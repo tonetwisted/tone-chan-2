@@ -6,7 +6,7 @@ export const GAME_META: GameMetadata = {
   title: "Tone Chan's Adventures",
   subtitle: "An Epic 8-Bit Journey",
   description:
-    "Tone Chan's Adventures is a retro-styled Game Boy Color game blending anime storytelling, streetwear culture, and classic side-scrolling action. Follow Tone Chan through a neon-drenched world of rhythm, rebellion, and revelation.",
+    "Tone Chan Adventures is a retro-inspired indie game that blends classic Game Boy gameplay with a wild, character-driven universe. Play as ToneChan and his crew as they battle Booty Monsters and Autothotz on a mission to take down the elusive boss, FūFū. Packed with humor, action, and nostalgic vibes, the game brings a fresh twist to old-school adventure.",
   genre: ["Action", "Adventure", "Platformer"],
   platform: "GBC",
   developer: "Tone Chan Studios",
@@ -120,12 +120,8 @@ export const MEDIA_ASSETS: MediaAsset[] = [
 
 // ─── Social Links ─────────────────────────────────────────────────────────────
 export const SOCIAL_LINKS: SocialLink[] = [
-  { platform: "instagram", label: "Instagram",  url: "https://instagram.com/tonechan",    icon: "instagram" },
-  { platform: "twitter",   label: "Twitter/X",  url: "https://twitter.com/tonechan",      icon: "twitter" },
-  { platform: "tiktok",    label: "TikTok",     url: "https://tiktok.com/@tonechan",      icon: "tiktok" },
-  { platform: "youtube",   label: "YouTube",    url: "https://youtube.com/@tonechan",     icon: "youtube" },
-  { platform: "discord",   label: "Discord",    url: "https://discord.gg/tonechan",       icon: "discord" },
-  { platform: "spotify",   label: "Spotify",    url: "https://open.spotify.com/tonechan", icon: "spotify" },
+  { platform: "instagram", label: "Instagram", url: "https://www.instagram.com/tonetwisted", icon: "instagram" },
+  { platform: "spotify",   label: "Spotify",   url: "https://open.spotify.com/artist/1UZJ7r3HYkpXkRkR1ao2mo?si=577W-77HS5mXAwPS6fbZDA", icon: "spotify" },
 ];
 
 // ─── Navigation Links ─────────────────────────────────────────────────────────
