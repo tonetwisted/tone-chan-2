@@ -55,37 +55,19 @@ export default function EmulatorContainer() {
   useEffect(() => { setIsMobile(isMobileDevice()); }, []);
 
   const fireButton = useCallback((btn: string, down: boolean) => {
-    const type = down ? "keydown" : "keyup";
-
-    // Method 1: simulateInput API (works across iframes)
-    const w = window as unknown as Record<string, unknown>;
-    const ejs = w.EJS_emulator as
-      | { simulateInput?: (player: number, button: number, value: number) => void }
-      | undefined;
+    const val = down ? 1 : 0;
     const idx = BTN_TO_INDEX[btn];
-    if (idx !== undefined) ejs?.simulateInput?.(0, idx, down ? 1 : 0);
 
-    // Method 2: keyboard events on window + all iframes (fallback)
-    const key = BTN_TO_KEY[btn];
-    if (key) {
-      const opts = { key, bubbles: true, cancelable: true };
-      window.dispatchEvent(new KeyboardEvent(type, opts));
-      document.querySelectorAll<HTMLIFrameElement>("iframe").forEach((f) => {
-        try { f.contentWindow?.dispatchEvent(new KeyboardEvent(type, opts)); } catch { /* cross-origin */ }
-      });
-    }
+    // Correct path: EJS_emulator.gameManager.simulateInput(player, button, value)
+    const w = window as unknown as Record<string, unknown>;
+    const gm = (w.EJS_emulator as { gameManager?: { simulateInput?: (p: number, b: number, v: number) => void } } | undefined)?.gameManager;
 
-    // A and B also fire Enter so they advance title screens and dialog
-    if ((btn === "A" || btn === "B") && down) {
-      ejs?.simulateInput?.(0, BTN_TO_INDEX.Start, 1);
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-      document.querySelectorAll<HTMLIFrameElement>("iframe").forEach((f) => {
-        try { f.contentWindow?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); } catch { /* cross-origin */ }
-      });
-    }
-    if ((btn === "A" || btn === "B") && !down) {
-      ejs?.simulateInput?.(0, BTN_TO_INDEX.Start, 0);
-      window.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+    if (idx !== undefined && gm?.simulateInput) {
+      gm.simulateInput(0, idx, val);
+      // A and B also send Start so they advance title screens and dialog boxes
+      if (btn === "A" || btn === "B") {
+        gm.simulateInput(0, BTN_TO_INDEX.Start, val);
+      }
     }
   }, []);
 
