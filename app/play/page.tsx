@@ -16,15 +16,15 @@ export default function PlayPage() {
           "radial-gradient(ellipse at 50% 30%, rgba(123,47,190,0.12) 0%, transparent 60%)",
       }}
     >
-      {/* Minimal header — doesn't steal space */}
-      <div className="pt-20 pb-3 text-center flex-shrink-0 px-4">
+      {/* Minimal header — tight on mobile, spacious on desktop */}
+      <div className="pt-16 sm:pt-20 pb-2 sm:pb-3 text-center flex-shrink-0 px-4">
         <p className="font-pixel text-[7px] sm:text-[8px] text-tc-pink/50 tracking-widest">
           FREE DEMO
         </p>
       </div>
 
-      {/* Game Boy — the entire focus of this page */}
-      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 pb-4">
+      {/* Game — fills remaining space */}
+      <div className="flex-1 flex items-start sm:items-center justify-center sm:px-4 sm:pb-4">
         <EmulatorClientWrapper />
       </div>
     </div>

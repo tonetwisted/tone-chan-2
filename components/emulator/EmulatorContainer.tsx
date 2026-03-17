@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import GameBoyShell from "./GameBoyShell";
 import { isMobileDevice, supportsWasm } from "@/lib/emulator";
 
@@ -15,174 +15,151 @@ const EmulatorCanvas = dynamic(() => import("./EmulatorCanvas"), {
   ),
 });
 
-type State = "idle" | "playing" | "error";
+// Button name → keyboard key (what EmulatorJS listens for natively)
+const BTN_TO_KEY: Record<string, string> = {
+  Up:     "ArrowUp",
+  Down:   "ArrowDown",
+  Left:   "ArrowLeft",
+  Right:  "ArrowRight",
+  A:      "x",       // EmulatorJS GBC default: x = A
+  B:      "z",       // EmulatorJS GBC default: z = B
+  Start:  "Enter",
+  Select: "Shift",
+  L:      "a",
+  R:      "s",
+};
 
-// Keyboard → GBC button name mapping
-const KEY_TO_BUTTON: Record<string, string> = {
-  ArrowUp:    "Up",
-  ArrowDown:  "Down",
-  ArrowLeft:  "Left",
-  ArrowRight: "Right",
-  z:          "A",
-  Z:          "A",
-  x:          "B",
-  X:          "B",
-  Enter:      "Start",
-  Backspace:  "Select",
-  a:          "L",
-  A:          "L",
-  s:          "S",   // R shoulder (avoid conflict with A key)
-  S:          "R",
+// Physical key → button name (for visual highlight only)
+const KEY_TO_BTN: Record<string, string> = {
+  ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right",
+  x: "A", X: "A",
+  z: "B", Z: "B",
+  Enter: "Start",
+  Shift: "Select",
+  a: "L", A: "L",
+  s: "R", S: "R",
 };
 
 export default function EmulatorContainer() {
-  const [state, setState] = useState<State>("playing");
   const [hasWasm] = useState(() => typeof window !== "undefined" ? supportsWasm() : true);
   const [isMobile, setIsMobile] = useState(false);
+  const [isError, setIsError] = useState(false);
   const [pressed, setPressed] = useState<Set<string>>(new Set());
-  const stateRef = useRef(state);
-  stateRef.current = state;
 
-  useEffect(() => {
-    setIsMobile(isMobileDevice());
-  }, []);
+  useEffect(() => { setIsMobile(isMobileDevice()); }, []);
 
-  // Send button event to EmulatorJS
+  // Dispatch a real KeyboardEvent — EmulatorJS picks these up natively
   const fireButton = useCallback((btn: string, down: boolean) => {
-    const w = window as unknown as Record<string, unknown>;
-    const ejs = w.EJS_emulator as { simulateInput?: (btn: string, val: number) => void } | undefined;
-    ejs?.simulateInput?.(btn, down ? 1 : 0);
+    const key = BTN_TO_KEY[btn];
+    if (!key) return;
+    document.dispatchEvent(
+      new KeyboardEvent(down ? "keydown" : "keyup", { key, bubbles: true, cancelable: true })
+    );
   }, []);
 
-  // On-screen button handler (touch / click)
-  const handleButton = useCallback((btn: string, pressed: boolean) => {
-    fireButton(btn, pressed);
+  // Touch/on-screen button press
+  const handleButton = useCallback((btn: string, isDown: boolean) => {
+    fireButton(btn, isDown);
     setPressed((prev) => {
       const next = new Set(prev);
-      pressed ? next.add(btn) : next.delete(btn);
+      isDown ? next.add(btn) : next.delete(btn);
       return next;
     });
   }, [fireButton]);
 
-  // Keyboard listener — only active while playing
+  // Physical keyboard → visual highlight only (EmulatorJS handles the actual input)
   useEffect(() => {
-    if (state !== "playing") return;
-
     const onKeyDown = (e: KeyboardEvent) => {
-      // Prevent arrow keys from scrolling the page
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-        e.preventDefault();
-      }
-      const btn = KEY_TO_BUTTON[e.key];
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
+      const btn = KEY_TO_BTN[e.key];
       if (!btn || e.repeat) return;
-      fireButton(btn, true);
       setPressed((prev) => new Set(prev).add(btn));
     };
-
     const onKeyUp = (e: KeyboardEvent) => {
-      const btn = KEY_TO_BUTTON[e.key];
+      const btn = KEY_TO_BTN[e.key];
       if (!btn) return;
-      fireButton(btn, false);
-      setPressed((prev) => {
-        const next = new Set(prev);
-        next.delete(btn);
-        return next;
-      });
+      setPressed((prev) => { const next = new Set(prev); next.delete(btn); return next; });
     };
-
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [state, fireButton]);
+  }, []);
 
-  const handlePlay = useCallback(() => {
-    if (!hasWasm) { setState("error"); return; }
-    setState("playing");
-  }, [hasWasm]);
+  if (isError) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center gap-4 rounded-2xl border border-tc-pink/20 bg-tc-dark p-8">
+        <p className="font-pixel text-[10px] text-tc-pink">LOAD ERROR</p>
+        <p className="text-tc-cream/50 text-sm text-center max-w-xs">
+          {!hasWasm ? "WebAssembly is required. Please use a modern browser." : "Failed to initialize the emulator."}
+        </p>
+      </div>
+    );
+  }
 
+  // ── Mobile: clean screen on top, custom controls below ──────────────────────
+  if (isMobile) {
+    return (
+      <div className="w-full flex flex-col" style={{ minHeight: "calc(100dvh - 56px)" }}>
+        {/* Game screen — clean, no overlay */}
+        <div
+          className="w-full flex-shrink-0"
+          style={{
+            background: "#080810",
+            boxShadow: "0 0 24px rgba(76,201,240,0.08)",
+          }}
+        >
+          <div className="relative w-full" style={{ aspectRatio: "10/9" }}>
+            <EmulatorCanvas onReady={() => {}} onError={() => setIsError(true)} />
+          </div>
+        </div>
+
+        {/* Custom controls */}
+        <div
+          className="flex-1 flex flex-col justify-center px-4 py-4"
+          style={{ background: "linear-gradient(180deg, #0d0820 0%, #050508 100%)" }}
+        >
+          {/* Shoulder buttons */}
+          <div className="flex justify-between mb-2">
+            <MobileShoulderBtn label="L" gbaKey="L" active={pressed.has("L")} onButton={handleButton} align="left" />
+            <MobileShoulderBtn label="R" gbaKey="R" active={pressed.has("R")} onButton={handleButton} align="right" />
+          </div>
+
+          {/* Main row */}
+          <div className="flex items-center justify-between gap-2">
+            {/* D-pad */}
+            <MobileDPad onButton={handleButton} pressedButtons={pressed} />
+
+            {/* Select + Start */}
+            <div className="flex flex-col items-center gap-3">
+              <MobileMenuBtn label="SELECT" gbaKey="Select" active={pressed.has("Select")} onButton={handleButton} />
+              <MobileMenuBtn label="START"  gbaKey="Start"  active={pressed.has("Start")}  onButton={handleButton} />
+            </div>
+
+            {/* A + B */}
+            <MobileABCluster
+              aActive={pressed.has("A")}
+              bActive={pressed.has("B")}
+              onButton={handleButton}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Desktop: classic GameBoy shell ──────────────────────────────────────────
   return (
     <div className="w-full flex flex-col items-center">
-      {/* Shell wrapper */}
       <div
         className="w-full relative"
-        style={{
-          height: "clamp(480px, 85dvh, 720px)",
-          maxWidth: "clamp(300px, 96vw, 440px)",
-        }}
+        style={{ height: "clamp(480px, 85dvh, 720px)", maxWidth: "clamp(300px, 96vw, 440px)" }}
       >
-        <AnimatePresence mode="wait">
-          {state === "idle" ? (
-            <motion.div
-              key="idle"
-              className="w-full h-full"
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.97 }}
-              transition={{ duration: 0.35 }}
-            >
-              <GameBoyShell onButton={handleButton} pressedButtons={pressed} isPlaying={false}>
-                <button
-                  onClick={handlePlay}
-                  className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-[#0a1a0a] to-[#050508]"
-                  style={{ WebkitTapHighlightColor: "transparent" }}
-                >
-                  <div className="text-center space-y-1">
-                    <p className="font-pixel text-[6px] sm:text-[7px] text-tc-cyan/50 tracking-widest">GAME BOY COLOR</p>
-                    <p className="font-pixel text-[10px] sm:text-[12px] text-tc-pink tracking-wider" style={{ textShadow: "0 0 12px #FF006E" }}>TONE CHAN</p>
-                    <p className="font-pixel text-[7px] sm:text-[8px] text-tc-cream/40 tracking-widest">ADVENTURES</p>
-                  </div>
-                  <motion.p
-                    animate={{ opacity: [1, 0.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 1.1 }}
-                    className="font-pixel text-[6px] sm:text-[7px] text-tc-cream/50 tracking-[4px] mt-2"
-                  >
-                    TAP TO PLAY
-                  </motion.p>
-                </button>
-              </GameBoyShell>
-            </motion.div>
-          ) : state === "error" ? (
-            <motion.div
-              key="error"
-              className="w-full h-full flex flex-col items-center justify-center gap-4 rounded-2xl border border-tc-pink/20 bg-tc-dark"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <p className="font-pixel text-[10px] text-tc-pink">LOAD ERROR</p>
-              <p className="text-tc-cream/50 text-sm text-center max-w-xs px-4">
-                {!hasWasm
-                  ? "WebAssembly is required. Please use a modern browser."
-                  : "Failed to initialize the emulator."}
-              </p>
-              <button
-                onClick={() => setState("idle")}
-                className="font-pixel text-[9px] text-tc-cyan border border-tc-cyan/30 px-5 py-2 rounded hover:bg-tc-cyan/10 transition-colors"
-              >
-                GO BACK
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="playing"
-              className="w-full h-full"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-            >
-              <GameBoyShell onButton={handleButton} pressedButtons={pressed} isPlaying>
-                <EmulatorCanvas
-                  onReady={() => {}}
-                  onError={() => setState("error")}
-                />
-              </GameBoyShell>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Ambient glow */}
+        <GameBoyShell onButton={handleButton} pressedButtons={pressed} isPlaying>
+          <EmulatorCanvas onReady={() => {}} onError={() => setIsError(true)} />
+        </GameBoyShell>
         <div
           className="absolute -inset-4 -z-10 blur-3xl opacity-30 rounded-full pointer-events-none"
           style={{ background: "radial-gradient(ellipse, #7B2FBE 0%, #FF006E 50%, transparent 80%)" }}
@@ -190,64 +167,167 @@ export default function EmulatorContainer() {
       </div>
 
       {/* Desktop keyboard hints */}
-      {state === "playing" && !isMobile && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2"
-        >
-          {[
-            { keys: "Arrows", action: "D-Pad" },
-            { keys: "Z",      action: "A" },
-            { keys: "X",      action: "B" },
-            { keys: "Enter",  action: "Start" },
-            { keys: "BkSp",   action: "Select" },
-            { keys: "F",      action: "Fullscreen" },
-          ].map(({ keys, action }) => (
-            <div key={keys} className="flex items-center gap-1.5 text-tc-cream/30 text-xs">
-              <kbd className="font-mono text-[10px] bg-white/8 border border-white/10 px-1.5 py-0.5 rounded text-tc-cyan/60">{keys}</kbd>
-              <span>{action}</span>
-            </div>
-          ))}
-        </motion.div>
-      )}
-
-      {/* Play CTA */}
-      {state === "idle" && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-6 flex flex-col items-center gap-2"
-        >
-          <button
-            onClick={handlePlay}
-            className="flex items-center gap-3 px-8 py-4 rounded-xl font-pixel text-xs text-white transition-all duration-300 hover:scale-105 active:scale-95"
-            style={{
-              background: "linear-gradient(135deg, #FF006E, #7B2FBE)",
-              boxShadow: "0 0 24px #FF006E60, 0 0 48px #7B2FBE30",
-            }}
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <polygon points="5,3 19,12 5,21" />
-            </svg>
-            PLAY DEMO
-          </button>
-          <p className="font-pixel text-[7px] text-tc-cream/25 tracking-widest">
-            FREE · NO DOWNLOAD · BROWSER
-          </p>
-        </motion.div>
-      )}
-
-      {state === "playing" && (
-        <button
-          onClick={() => setState("idle")}
-          className="mt-4 font-pixel text-[7px] text-tc-cream/25 hover:text-tc-cream/50 tracking-widest transition-colors"
-        >
-          ✕ EXIT
-        </button>
-      )}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2"
+      >
+        {[
+          { keys: "Arrows", action: "D-Pad" },
+          { keys: "X",      action: "A" },
+          { keys: "Z",      action: "B" },
+          { keys: "Enter",  action: "Start" },
+          { keys: "Shift",  action: "Select" },
+        ].map(({ keys, action }) => (
+          <div key={keys} className="flex items-center gap-1.5 text-tc-cream/30 text-xs">
+            <kbd className="font-mono text-[10px] bg-white/8 border border-white/10 px-1.5 py-0.5 rounded text-tc-cyan/60">{keys}</kbd>
+            <span>{action}</span>
+          </div>
+        ))}
+      </motion.div>
     </div>
+  );
+}
+
+// ── Mobile sub-components ────────────────────────────────────────────────────
+
+function MobileDPad({
+  onButton,
+  pressedButtons,
+}: {
+  onButton: (btn: string, down: boolean) => void;
+  pressedButtons: Set<string>;
+}) {
+  const dirs = [
+    { key: "Up",    label: "▲", col: 2, row: 1 },
+    { key: "Left",  label: "◄", col: 1, row: 2 },
+    { key: "Right", label: "►", col: 3, row: 2 },
+    { key: "Down",  label: "▼", col: 2, row: 3 },
+  ];
+  const sz = "clamp(88px, 26vw, 120px)";
+  return (
+    <div
+      className="grid gap-1 flex-shrink-0"
+      style={{ gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(3, 1fr)", width: sz, height: sz }}
+    >
+      {dirs.map(({ key, label, col, row }) => {
+        const active = pressedButtons.has(key);
+        return (
+          <button
+            key={key}
+            onPointerDown={() => onButton(key, true)}
+            onPointerUp={() => onButton(key, false)}
+            onPointerLeave={() => onButton(key, false)}
+            onPointerCancel={() => onButton(key, false)}
+            className={`text-base flex items-center justify-center rounded-md transition-colors duration-75 touch-none select-none
+              ${active ? "bg-tc-purple text-tc-cream" : "bg-[#2a0845] text-tc-cream/70 active:bg-tc-purple"}
+            `}
+            style={{ gridColumn: col, gridRow: row, WebkitTapHighlightColor: "transparent" }}
+          >
+            {label}
+          </button>
+        );
+      })}
+      <div style={{ gridColumn: 2, gridRow: 2 }} className="bg-[#1a0533] rounded-sm" />
+    </div>
+  );
+}
+
+function MobileABCluster({
+  aActive, bActive, onButton,
+}: {
+  aActive: boolean;
+  bActive: boolean;
+  onButton: (btn: string, down: boolean) => void;
+}) {
+  const sz = "clamp(54px, 15vw, 68px)";
+  return (
+    <div className="relative flex-shrink-0" style={{ width: "clamp(100px, 28vw, 130px)", height: "clamp(88px, 26vw, 120px)" }}>
+      {/* A button — top right */}
+      <button
+        onPointerDown={() => onButton("A", true)}
+        onPointerUp={() => onButton("A", false)}
+        onPointerLeave={() => onButton("A", false)}
+        onPointerCancel={() => onButton("A", false)}
+        className={`absolute right-0 top-0 rounded-full touch-none flex items-center justify-center transition-all duration-75
+          ${aActive ? "bg-white scale-90" : "bg-tc-pink active:scale-90 shadow-glow-pink"}
+        `}
+        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent" }}
+      >
+        <span className={`font-pixel text-xs ${aActive ? "text-tc-pink" : "text-white"}`}>A</span>
+      </button>
+
+      {/* B button — bottom left */}
+      <button
+        onPointerDown={() => onButton("B", true)}
+        onPointerUp={() => onButton("B", false)}
+        onPointerLeave={() => onButton("B", false)}
+        onPointerCancel={() => onButton("B", false)}
+        className={`absolute left-0 bottom-0 rounded-full touch-none flex items-center justify-center transition-all duration-75
+          ${bActive ? "bg-white scale-90" : "bg-tc-cyan active:scale-90 shadow-glow-cyan"}
+        `}
+        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent" }}
+      >
+        <span className={`font-pixel text-xs ${bActive ? "text-tc-cyan" : "text-[#050508]"}`}>B</span>
+      </button>
+    </div>
+  );
+}
+
+function MobileMenuBtn({
+  label, gbaKey, active, onButton,
+}: {
+  label: string;
+  gbaKey: string;
+  active: boolean;
+  onButton: (btn: string, down: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button
+        onPointerDown={() => onButton(gbaKey, true)}
+        onPointerUp={() => onButton(gbaKey, false)}
+        onPointerLeave={() => onButton(gbaKey, false)}
+        onPointerCancel={() => onButton(gbaKey, false)}
+        className={`rounded-full touch-none transition-colors duration-75
+          ${active ? "bg-tc-purple" : "bg-[#2a0845] active:bg-tc-purple"}
+        `}
+        style={{
+          width: "clamp(44px, 12vw, 60px)",
+          height: "clamp(13px, 3vw, 17px)",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      />
+      <span className={`font-pixel text-[5px] tracking-wider ${active ? "text-tc-cream/70" : "text-tc-cream/30"}`}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function MobileShoulderBtn({
+  label, gbaKey, active, onButton, align,
+}: {
+  label: string;
+  gbaKey: string;
+  active: boolean;
+  onButton: (btn: string, down: boolean) => void;
+  align: "left" | "right";
+}) {
+  return (
+    <button
+      onPointerDown={() => onButton(gbaKey, true)}
+      onPointerUp={() => onButton(gbaKey, false)}
+      onPointerLeave={() => onButton(gbaKey, false)}
+      onPointerCancel={() => onButton(gbaKey, false)}
+      className={`touch-none transition-colors duration-75 rounded-lg px-5 py-1.5 border border-tc-purple/20
+        ${active ? "bg-tc-purple/60" : "bg-white/5 active:bg-tc-purple/40"}
+        ${align === "left" ? "rounded-tl-none" : "rounded-tr-none"}
+      `}
+      style={{ WebkitTapHighlightColor: "transparent" }}
+    >
+      <span className={`font-pixel text-[8px] ${active ? "text-tc-cream/80" : "text-tc-cream/40"}`}>{label}</span>
+    </button>
   );
 }

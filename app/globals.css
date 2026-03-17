@@ -107,12 +107,11 @@ body {
   object-fit: contain;
 }
 
-/* Hide EmulatorJS built-in mobile touch controls & bottom toolbar */
-.ejs-mobile-controls,
-.ejs-controls-overlay,
-[class*="mobile-controls"],
-[class*="touch-controls"],
-.ejs-bottom-bar {
+/* Hide EmulatorJS built-in virtual gamepad — we use our own controls */
+.ejs_virtualGamepad,
+.ejs_virtualGamepad_btn,
+[class^="ejs_virtualGamepad"],
+[id^="ejs_virtualGamepad"] {
   display: none !important;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { initEmulatorJS, DEMO_ROM, isMobileDevice } from "@/lib/emulator";
+import { initEmulatorJS, DEMO_ROM } from "@/lib/emulator";
 import type { EmulatorConfig, SkinConfig } from "@/types";
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
   className?: string;
 }
 
-type State = "idle" | "loading" | "ready" | "error";
+type State = "loading" | "ready" | "error";
 
 export default function EmulatorCanvas({
   romPath = DEMO_ROM.path,
@@ -28,36 +28,7 @@ export default function EmulatorCanvas({
   const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    // EmulatorJS requires window, so guard SSR
     if (typeof window === "undefined") return;
-
-    // Watch for EmulatorJS touch/gamepad overlay elements and hide them
-    // so only our custom GameBoyShell controls are visible
-    const container = document.getElementById(containerId);
-    const observer = new MutationObserver(() => {
-      if (!container) return;
-      container.querySelectorAll<HTMLElement>("*").forEach((el) => {
-        const cls = (el.className || "").toString().toLowerCase();
-        const id  = (el.id || "").toLowerCase();
-        if (
-          cls.includes("gamepad") ||
-          cls.includes("mobile") ||
-          cls.includes("control") ||
-          cls.includes("button") ||
-          cls.includes("joystick") ||
-          cls.includes("dpad") ||
-          id.includes("gamepad") ||
-          id.includes("mobile") ||
-          id.includes("control")
-        ) {
-          el.style.setProperty("display", "none", "important");
-        }
-      });
-    });
-
-    if (container) {
-      observer.observe(container, { childList: true, subtree: true });
-    }
 
     const cleanup = initEmulatorJS({
       containerId,
@@ -75,9 +46,7 @@ export default function EmulatorCanvas({
     });
 
     cleanupRef.current = cleanup;
-
     return () => {
-      observer.disconnect();
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
@@ -86,7 +55,6 @@ export default function EmulatorCanvas({
 
   return (
     <div className={`relative w-full h-full ${className}`}>
-      {/* Loading state */}
       {state === "loading" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d1a0a] z-20">
           <div className="font-pixel text-[8px] text-tc-cyan animate-pulse tracking-widest mb-3">
@@ -98,27 +66,16 @@ export default function EmulatorCanvas({
         </div>
       )}
 
-      {/* Error state */}
       {state === "error" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d1a0a] z-20 p-4">
           <span className="font-pixel text-[7px] text-tc-pink mb-2 tracking-widest">ERROR</span>
           <p className="text-tc-cream/50 text-xs text-center">
             {error ?? "Emulator failed to load."}
           </p>
-          {isMobileDevice() && (
-            <p className="text-tc-cream/30 text-[10px] text-center mt-2">
-              Mobile performance may be limited. Try on desktop for best experience.
-            </p>
-          )}
         </div>
       )}
 
-      {/* EmulatorJS target div */}
-      <div
-        id={containerId}
-        className="w-full h-full"
-        style={{ aspectRatio: "10/9" }}
-      />
+      <div id={containerId} className="w-full h-full" />
     </div>
   );
 }
