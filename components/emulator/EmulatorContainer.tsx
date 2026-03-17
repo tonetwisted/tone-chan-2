@@ -15,18 +15,18 @@ const EmulatorCanvas = dynamic(() => import("./EmulatorCanvas"), {
   ),
 });
 
-// Button name → keyboard key (what EmulatorJS listens for natively)
-const BTN_TO_KEY: Record<string, string> = {
-  Up:     "ArrowUp",
-  Down:   "ArrowDown",
-  Left:   "ArrowLeft",
-  Right:  "ArrowRight",
-  A:      "x",       // EmulatorJS GBC default: x = A
-  B:      "z",       // EmulatorJS GBC default: z = B
-  Start:  "Enter",
-  Select: "Shift",
-  L:      "a",
-  R:      "s",
+// Libretro button indices used by EmulatorJS simulateInput(player, buttonIndex, value)
+const BTN_TO_INDEX: Record<string, number> = {
+  B:      0,
+  Select: 2,
+  Start:  3,
+  Up:     4,
+  Down:   5,
+  Left:   6,
+  Right:  7,
+  A:      8,
+  L:      10,
+  R:      11,
 };
 
 // Physical key → button name (for visual highlight only)
@@ -35,7 +35,7 @@ const KEY_TO_BTN: Record<string, string> = {
   x: "A", X: "A",
   z: "B", Z: "B",
   Enter: "Start",
-  Shift: "Select",
+  Backspace: "Select",
   a: "L", A: "L",
   s: "R", S: "R",
 };
@@ -48,13 +48,16 @@ export default function EmulatorContainer() {
 
   useEffect(() => { setIsMobile(isMobileDevice()); }, []);
 
-  // Dispatch a real KeyboardEvent — EmulatorJS picks these up natively
+  // Use EmulatorJS simulateInput API with libretro button indices.
+  // This works even when EmulatorJS renders inside an iframe.
   const fireButton = useCallback((btn: string, down: boolean) => {
-    const key = BTN_TO_KEY[btn];
-    if (!key) return;
-    document.dispatchEvent(
-      new KeyboardEvent(down ? "keydown" : "keyup", { key, bubbles: true, cancelable: true })
-    );
+    const idx = BTN_TO_INDEX[btn];
+    if (idx === undefined) return;
+    const w = window as unknown as Record<string, unknown>;
+    const ejs = w.EJS_emulator as
+      | { simulateInput?: (player: number, button: number, value: number) => void }
+      | undefined;
+    ejs?.simulateInput?.(0, idx, down ? 1 : 0);
   }, []);
 
   // Touch/on-screen button press
@@ -67,17 +70,19 @@ export default function EmulatorContainer() {
     });
   }, [fireButton]);
 
-  // Physical keyboard → visual highlight only (EmulatorJS handles the actual input)
+  // Physical keyboard → fire simulateInput + visual highlight
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
       const btn = KEY_TO_BTN[e.key];
       if (!btn || e.repeat) return;
+      fireButton(btn, true);
       setPressed((prev) => new Set(prev).add(btn));
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const btn = KEY_TO_BTN[e.key];
       if (!btn) return;
+      fireButton(btn, false);
       setPressed((prev) => { const next = new Set(prev); next.delete(btn); return next; });
     };
     window.addEventListener("keydown", onKeyDown);
@@ -86,7 +91,7 @@ export default function EmulatorContainer() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, []);
+  }, [fireButton]);
 
   if (isError) {
     return (
