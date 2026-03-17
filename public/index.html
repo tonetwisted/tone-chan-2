@@ -173,6 +173,11 @@
       filter: brightness(1.5);
     }
 
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
     /* ── Hide any EmulatorJS built-in touch overlay ───────────────────────── */
     .ejs-virtualGamepad,
     .ejs_virtualGamepad,
@@ -186,8 +191,17 @@
   <div id="app">
 
     <!-- ── Game screen ─────────────────────────────────────────────────── -->
-    <div id="screen-wrap">
+    <div id="screen-wrap" style="position:relative;">
       <div id="game"></div>
+      <!-- Tap to play overlay — dismissed on first tap, unlocks browser audio -->
+      <div id="tap-overlay" style="
+        position:absolute; inset:0; z-index:50;
+        display:flex; align-items:center; justify-content:center;
+        background:rgba(5,5,8,0.85); cursor:pointer; user-select:none;
+        font-family:monospace; letter-spacing:4px;
+        font-size:clamp(10px,3vw,14px); color:#FF006E;
+        animation:pulse 1.4s ease-in-out infinite;
+      ">TAP TO PLAY</div>
     </div>
 
     <!-- ── Custom touch controls ──────────────────────────────────────── -->
@@ -232,6 +246,7 @@
   <!-- ── EmulatorJS config — must come BEFORE loader.js ─────────────── -->
   <script>
     var EJS_player        = "#game";
+    var EJS_gameName      = "Tone Chan's Adventures";
     var EJS_core          = "gambatte";          // Game Boy Color core
     // Absolute URL required — CDN iframe resolves relative paths against cdn.emulatorjs.org
     var EJS_gameUrl       = window.location.origin + "/roms/tone-chan-demo.gbc";
@@ -303,6 +318,28 @@
     }
 
     document.querySelectorAll("[data-key]").forEach(wireButton);
+  </script>
+
+  <!-- ── Tap-to-play: dismiss overlay and unlock audio on first interaction ── -->
+  <script>
+    var overlayDismissed = false;
+    function dismissOverlay() {
+      if (overlayDismissed) return;
+      overlayDismissed = true;
+      var overlay = document.getElementById("tap-overlay");
+      if (overlay) overlay.style.display = "none";
+      // Click the game container within this trusted event callback to unlock audio
+      document.getElementById("game").click();
+    }
+
+    document.getElementById("tap-overlay").addEventListener("click", dismissOverlay);
+    document.getElementById("tap-overlay").addEventListener("touchstart", dismissOverlay, { passive: true });
+
+    // Also dismiss on first button press (button presses are trusted events)
+    document.querySelectorAll("[data-key]").forEach(function(el) {
+      el.addEventListener("touchstart", dismissOverlay, { passive: true });
+      el.addEventListener("mousedown", dismissOverlay);
+    });
   </script>
 
   <!-- ── EmulatorJS loader — must be LAST ───────────────────────────── -->
