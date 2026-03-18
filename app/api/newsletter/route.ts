@@ -5,7 +5,39 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// ── In-memory rate limiter ──────────────────────────────────────────────────
+const LIMIT = 5;
+const WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+
+const ipHits = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = ipHits.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    ipHits.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    return false;
+  }
+
+  if (entry.count >= LIMIT) return true;
+  entry.count++;
+  return false;
+}
+
 export async function POST(request: NextRequest) {
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+
+  if (isRateLimited(ip)) {
+    return NextResponse.json<NewsletterResponse>(
+      { success: false, message: "Too many requests. Try again later." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = (await request.json()) as Partial<NewsletterSignup>;
     const { email, source } = body;
