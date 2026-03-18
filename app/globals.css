@@ -7,6 +7,7 @@
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 :root {
+  /* Legacy tc-* tokens (used by emulator shell) */
   --tc-black:   #050508;
   --tc-dark:    #0d0a1a;
   --tc-purple:  #7B2FBE;
@@ -15,6 +16,32 @@
   --tc-cyan:    #4CC9F0;
   --tc-gold:    #F7B731;
   --tc-cream:   #F5F0E8;
+
+  /* ── New design system ─────────────────────────────────────────── */
+  --bg:           hsl(220, 100%, 4%);
+  --bg-card:      hsl(220, 84%, 6%);
+  --border:       hsl(215, 27.9%, 16.9%);
+
+  --primary:      hsl(330, 81%, 60%);
+  --primary-glow: hsl(330, 81%, 70%);
+  --secondary:    hsl(200, 98%, 60%);
+  --secondary-glow: hsl(200, 98%, 70%);
+  --accent:       hsl(47, 96%, 53%);
+  --accent-glow:  hsl(47, 96%, 63%);
+
+  --neon-pink:    hsl(326, 100%, 74%);
+  --neon-cyan:    hsl(191, 100%, 50%);
+  --neon-green:   hsl(120, 100%, 50%);
+  --neon-purple:  hsl(271, 81%, 56%);
+  --neon-orange:  hsl(25, 95%, 53%);
+
+  --text:         hsl(210, 40%, 98%);
+  --text-muted:   hsl(217.9, 10.6%, 64.9%);
+
+  --gradient-primary:    linear-gradient(135deg, hsl(330 81% 60%), hsl(271 81% 56%), hsl(200 98% 60%));
+  --gradient-secondary:  linear-gradient(135deg, hsl(47 96% 53%), hsl(25 95% 53%), hsl(326 100% 74%));
+  --gradient-bg:         linear-gradient(135deg, hsl(220 100% 4%), hsl(220 84% 6%), hsl(215 27.9% 16.9%));
+  --gradient-glow:       linear-gradient(135deg, hsla(330 81% 60% / 0.3), hsla(271 81% 56% / 0.3), hsla(200 98% 60% / 0.3));
 }
 
 * {
@@ -120,6 +147,12 @@ body {
   outline: 2px solid var(--tc-cyan);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* ── Social icon hover ────────────────────────────────────────────────────── */
+.social-icon:hover {
+  box-shadow: 0 0 16px hsla(330, 81%, 60%, 0.4);
+  border-color: hsl(330, 81%, 60%) !important;
 }
 
 /* ── Safe area bottom padding (iPhone notch / home indicator) ────────────── */

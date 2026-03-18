@@ -19,9 +19,9 @@ export default function GameBoyShell({
     <div
       className="relative w-full h-full flex flex-col select-none overflow-hidden rounded-2xl sm:rounded-3xl"
       style={{
-        background: "linear-gradient(170deg, #1a0533 0%, #0d0820 60%, #050508 100%)",
-        border: "1.5px solid rgba(255,255,255,0.07)",
-        boxShadow: "0 0 60px rgba(123,47,190,0.25), 0 30px 80px rgba(0,0,0,0.8)",
+        background: "linear-gradient(170deg, hsl(220,84%,6%) 0%, hsl(220,100%,4%) 60%, hsl(220,100%,3%) 100%)",
+        border: "1.5px solid hsl(215,27.9%,16.9%)",
+        boxShadow: "0 0 60px hsla(271,81%,56%,0.2), 0 30px 80px rgba(0,0,0,0.8)",
       }}
     >
       {/* Shoulder buttons */}
@@ -41,18 +41,18 @@ export default function GameBoyShell({
           }}
         >
           <div className="flex items-center justify-between px-3 pt-2 pb-1">
-            <span className="font-pixel text-[5px] sm:text-[6px] text-tc-cream/25 tracking-[3px]">GAME BOY COLOR</span>
-            <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${isPlaying ? "bg-tc-pink shadow-glow-pink animate-glow-pulse" : "bg-tc-cream/20"}`} />
+            <span style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif", fontSize: "9px", letterSpacing: "3px", fontWeight: 700, color: "hsl(326,100%,74%)", textTransform: "uppercase" }}>TONIBOI</span>
+            <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${isPlaying ? "animate-glow-pulse" : ""}`} style={{ background: isPlaying ? "hsl(120,100%,50%)" : "hsl(215,27.9%,30%)", boxShadow: isPlaying ? "0 0 8px hsl(120,100%,50%)" : "none" }} />
           </div>
 
-          <div className="relative w-full overflow-hidden" style={{ aspectRatio: "10/9" }}>
+          <div className="relative w-full overflow-hidden" style={{ aspectRatio: "10/9", border: "3px solid hsl(120,100%,50%)", boxShadow: "0 0 16px hsl(120,100%,50%), inset 0 0 16px rgba(0,0,0,0.8)" }}>
             <div className="absolute inset-0 pointer-events-none z-10" style={{ background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px)" }} />
             <div className="absolute inset-0 pointer-events-none z-10" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%)" }} />
-            <div className="absolute inset-0 bg-[#0a140a]">{children}</div>
+            <div className="absolute inset-0 bg-[#020a02]">{children}</div>
           </div>
 
           <div className="flex justify-center py-1.5">
-            <span className="font-pixel text-[4px] sm:text-[5px] text-tc-pink/40 tracking-[5px]">◆ COLOR ◆</span>
+            <span style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif", fontSize: "8px", letterSpacing: "4px", fontWeight: 700, color: "hsla(326,100%,74%,0.4)" }}>◆ TONIBOI ◆</span>
           </div>
         </div>
       </div>
@@ -109,7 +109,7 @@ function ShoulderBtn({
       onPointerCancel={() => onButton?.(gbaKey, false)}
       className={`w-[22%] h-7 sm:h-9 border-b-2 border-tc-purple/20 flex items-center transition-colors duration-75 touch-none
         ${side === "left" ? "rounded-br-2xl rounded-tl-2xl justify-start pl-3" : "rounded-bl-2xl rounded-tr-2xl justify-end pr-3"}
-        ${active ? "bg-tc-purple/60" : "bg-white/5 hover:bg-tc-purple/30 active:bg-tc-purple/60"}
+        ${active ? "bg-[hsl(271,81%,30%)]" : "bg-white/5 hover:bg-[hsl(271,81%,20%)] active:bg-[hsl(271,81%,30%)]"}
       `}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
@@ -150,16 +150,14 @@ function DPad({
             onPointerUp={() => onButton?.(key, false)}
             onPointerLeave={() => onButton?.(key, false)}
             onPointerCancel={() => onButton?.(key, false)}
-            className={`text-sm sm:text-base flex items-center justify-center rounded-sm transition-colors duration-75 touch-none
-              ${active ? "bg-tc-purple text-tc-cream" : "bg-[#2a0845] hover:bg-tc-purple/70 active:bg-tc-purple text-tc-cream/70"}
-            `}
-            style={{ gridColumn: col, gridRow: row, WebkitTapHighlightColor: "transparent" }}
+            className={`text-sm sm:text-base flex items-center justify-center rounded-sm transition-colors duration-75 touch-none ${active ? "text-white" : "text-[hsl(217.9,10.6%,64.9%)]"}`}
+            style={{ gridColumn: col, gridRow: row, WebkitTapHighlightColor: "transparent", background: active ? "hsl(271,81%,56%)" : "hsl(220,84%,10%)" }}
           >
             {label}
           </button>
         );
       })}
-      <div style={{ gridColumn: 2, gridRow: 2 }} className="bg-[#1a0533] rounded-sm" />
+      <div style={{ gridColumn: 2, gridRow: 2, background: "hsl(220,84%,6%)" }} className="rounded-sm" />
     </div>
   );
 }
@@ -182,14 +180,10 @@ function ABCluster({
         onPointerUp={() => onButton?.("A", false)}
         onPointerLeave={() => onButton?.("A", false)}
         onPointerCancel={() => onButton?.("A", false)}
-        className={`absolute right-0 top-0 rounded-full touch-none flex items-center justify-center transition-all duration-75
-          ${aActive
-            ? "bg-white scale-90 shadow-none"
-            : "bg-tc-pink hover:bg-tc-pink/80 active:scale-90 shadow-glow-pink"}
-        `}
-        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent" }}
+        className={`absolute right-0 top-0 rounded-full touch-none flex items-center justify-center transition-all duration-75 ${aActive ? "scale-90" : "active:scale-90"}`}
+        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent", background: aActive ? "white" : "hsl(200,98%,60%)", boxShadow: aActive ? "none" : "0 0 14px hsl(200,98%,60%)" }}
       >
-        <span className={`font-pixel text-[10px] sm:text-xs ${aActive ? "text-tc-pink" : "text-white"}`}>A</span>
+        <span style={{ fontFamily: "ui-sans-serif,system-ui,sans-serif", fontSize: 13, fontWeight: 900, color: aActive ? "hsl(200,98%,60%)" : "white" }}>A</span>
       </button>
 
       {/* B button */}
@@ -198,14 +192,10 @@ function ABCluster({
         onPointerUp={() => onButton?.("B", false)}
         onPointerLeave={() => onButton?.("B", false)}
         onPointerCancel={() => onButton?.("B", false)}
-        className={`absolute left-0 bottom-0 rounded-full touch-none flex items-center justify-center transition-all duration-75
-          ${bActive
-            ? "bg-white scale-90 shadow-none"
-            : "bg-tc-cyan hover:bg-tc-cyan/80 active:scale-90 shadow-glow-cyan"}
-        `}
-        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent" }}
+        className={`absolute left-0 bottom-0 rounded-full touch-none flex items-center justify-center transition-all duration-75 ${bActive ? "scale-90" : "active:scale-90"}`}
+        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent", background: bActive ? "white" : "hsl(0,72%,51%)", boxShadow: bActive ? "none" : "0 0 14px hsl(0,72%,51%)" }}
       >
-        <span className={`font-pixel text-[10px] sm:text-xs ${bActive ? "text-tc-cyan" : ""}`} style={bActive ? {} : { color: "#050508" }}>B</span>
+        <span style={{ fontFamily: "ui-sans-serif,system-ui,sans-serif", fontSize: 13, fontWeight: 900, color: bActive ? "hsl(0,72%,51%)" : "white" }}>B</span>
       </button>
     </div>
   );
@@ -226,16 +216,16 @@ function MiniBtn({
         onPointerUp={() => onButton?.(gbaKey, false)}
         onPointerLeave={() => onButton?.(gbaKey, false)}
         onPointerCancel={() => onButton?.(gbaKey, false)}
-        className={`rounded-full transition-colors duration-75 touch-none
-          ${active ? "bg-tc-purple" : "bg-[#2a0845] hover:bg-tc-purple/60 active:bg-tc-purple"}
-        `}
+        className="rounded-full transition-colors duration-75 touch-none"
         style={{
           width: "clamp(38px, 10vw, 54px)",
           height: "clamp(11px, 2.5vw, 15px)",
           WebkitTapHighlightColor: "transparent",
+          background: active ? "hsl(271,81%,56%)" : "hsl(220,84%,10%)",
+          boxShadow: active ? "0 0 8px hsl(271,81%,56%)" : "none",
         }}
       />
-      <span className={`font-pixel text-[5px] sm:text-[6px] tracking-wider transition-colors ${active ? "text-tc-cream/70" : "text-tc-cream/30"}`}>
+      <span style={{ fontFamily: "ui-sans-serif,system-ui,sans-serif", fontSize: 8, letterSpacing: "0.1em", fontWeight: 700, color: active ? "hsl(210,40%,80%)" : "hsl(217.9,10.6%,40%)" }}>
         {label}
       </span>
     </div>
