@@ -41,6 +41,7 @@ const KEY_TO_BTN: Record<string, string> = {
   x: "A", X: "A",
   z: "B", Z: "B",
   Enter: "Start",
+  Shift: "Select",
   Backspace: "Select",
   a: "L", A: "L",
   s: "R", S: "R",
@@ -59,7 +60,34 @@ export default function EmulatorContainer() {
       const next = new Set(prev);
       if (down) next.add(btn);
       else next.delete(btn);
-      setJoypadState(next);
+
+      const joypadState = {
+        UP: false,
+        RIGHT: false,
+        DOWN: false,
+        LEFT: false,
+        A: false,
+        B: false,
+        SELECT: false,
+        START: false,
+        L: false,
+        R: false,
+      };
+
+      for (const key of next) {
+        if (key === "Up") joypadState.UP = true;
+        if (key === "Right") joypadState.RIGHT = true;
+        if (key === "Down") joypadState.DOWN = true;
+        if (key === "Left") joypadState.LEFT = true;
+        if (key === "A") joypadState.A = true;
+        if (key === "B") joypadState.B = true;
+        if (key === "Select") joypadState.SELECT = true;
+        if (key === "Start") joypadState.START = true;
+        if (key === "L") joypadState.L = true;
+        if (key === "R") joypadState.R = true;
+      }
+
+      setJoypadState(joypadState);
       return next;
     });
 
@@ -106,13 +134,21 @@ export default function EmulatorContainer() {
   // ── Mobile: clean screen on top, custom controls below ──────────────────────
   if (isMobile) {
     return (
-      <div className="w-full flex flex-col" style={{ minHeight: "calc(100dvh - 56px)" }}>
+      <div
+        className="w-full flex flex-col"
+        style={{
+          minHeight: "calc(100dvh - 56px)",
+          touchAction: "none",
+          overscrollBehavior: "contain",
+        }}
+      >
         {/* Game screen — clean, no overlay */}
         <div
           className="w-full flex-shrink-0"
           style={{
             background: "#080810",
             boxShadow: "0 0 24px rgba(76,201,240,0.08)",
+            touchAction: "none",
           }}
         >
           <div className="relative w-full" style={{ aspectRatio: "10/9" }}>
@@ -123,7 +159,11 @@ export default function EmulatorContainer() {
         {/* Custom controls */}
         <div
           className="flex-1 flex flex-col justify-center px-4 py-4"
-          style={{ background: "linear-gradient(180deg, #0d0820 0%, #050508 100%)" }}
+          style={{
+            background: "linear-gradient(180deg, #0d0820 0%, #050508 100%)",
+            touchAction: "none",
+            overscrollBehavior: "contain",
+          }}
         >
           {/* Shoulder buttons */}
           <div className="flex justify-between mb-2">
@@ -227,7 +267,7 @@ function MobileDPad({
             className={`text-base flex items-center justify-center rounded-md transition-colors duration-75 touch-none select-none
               ${active ? "bg-tc-purple text-tc-cream" : "bg-[#2a0845] text-tc-cream/70 active:bg-tc-purple"}
             `}
-            style={{ gridColumn: col, gridRow: row, WebkitTapHighlightColor: "transparent" }}
+            style={{ gridColumn: col, gridRow: row, WebkitTapHighlightColor: "transparent", touchAction: "none" }}
           >
             {label}
           </button>
@@ -257,7 +297,7 @@ function MobileABCluster({
         className={`absolute right-0 top-0 rounded-full touch-none flex items-center justify-center transition-all duration-75
           ${aActive ? "bg-white scale-90" : "bg-tc-pink active:scale-90 shadow-glow-pink"}
         `}
-        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent" }}
+        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent", touchAction: "none" }}
       >
         <span className={`font-pixel text-xs ${aActive ? "text-tc-pink" : "text-white"}`}>A</span>
       </button>
@@ -271,7 +311,7 @@ function MobileABCluster({
         className={`absolute left-0 bottom-0 rounded-full touch-none flex items-center justify-center transition-all duration-75
           ${bActive ? "bg-white scale-90" : "bg-tc-cyan active:scale-90 shadow-glow-cyan"}
         `}
-        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent" }}
+        style={{ width: sz, height: sz, WebkitTapHighlightColor: "transparent", touchAction: "none" }}
       >
         <span className={`font-pixel text-xs ${bActive ? "text-tc-cyan" : "text-[#050508]"}`}>B</span>
       </button>

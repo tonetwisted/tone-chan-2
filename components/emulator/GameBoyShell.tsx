@@ -45,9 +45,7 @@ export default function GameBoyShell({
             <span className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${isPlaying ? "animate-glow-pulse" : ""}`} style={{ background: isPlaying ? "hsl(120,100%,50%)" : "hsl(215,27.9%,30%)", boxShadow: isPlaying ? "0 0 8px hsl(120,100%,50%)" : "none" }} />
           </div>
 
-          <div className="relative w-full overflow-hidden" style={{ aspectRatio: "10/9", border: "3px solid hsl(120,100%,50%)", boxShadow: "0 0 16px hsl(120,100%,50%), inset 0 0 16px rgba(0,0,0,0.8)" }}>
-            <div className="absolute inset-0 pointer-events-none z-10" style={{ background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px)" }} />
-            <div className="absolute inset-0 pointer-events-none z-10" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%)" }} />
+          <div className="relative w-full overflow-hidden" style={{ aspectRatio: "160 / 144", border: "3px solid hsl(120,100%,50%)", boxShadow: "0 0 16px hsl(120,100%,50%), inset 0 0 16px rgba(0,0,0,0.8)" }}>
             <div className="absolute inset-0 bg-[#020a02]">{children}</div>
           </div>
 

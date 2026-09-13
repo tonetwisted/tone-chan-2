@@ -14,6 +14,8 @@ export default function PlayPage() {
       style={{
         backgroundImage:
           "radial-gradient(ellipse at 50% 30%, rgba(123,47,190,0.12) 0%, transparent 60%)",
+        touchAction: "none",
+        overscrollBehavior: "contain",
       }}
     >
       {/* Minimal header — tight on mobile, spacious on desktop */}

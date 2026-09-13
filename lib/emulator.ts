@@ -39,6 +39,8 @@ export function setJoypadState(activeButtons: Iterable<string> | Record<string, 
     B: false,
     SELECT: false,
     START: false,
+    L: false,
+    R: false,
   };
 
   const normalized =
@@ -52,14 +54,46 @@ export function setJoypadState(activeButtons: Iterable<string> | Record<string, 
   controllerState.LEFT = Boolean(normalized.LEFT || normalized.Left);
   controllerState.A = Boolean(normalized.A || normalized.a);
   controllerState.B = Boolean(normalized.B || normalized.b);
-  controllerState.SELECT = Boolean(normalized.SELECT || normalized.Select);
-  controllerState.START = Boolean(normalized.START || normalized.Start);
+  controllerState.SELECT = Boolean(normalized.SELECT || normalized.Select || normalized.Shift);
+  controllerState.START = Boolean(normalized.START || normalized.Start || normalized.Enter);
+  controllerState.L = Boolean(normalized.L || normalized.l);
+  controllerState.R = Boolean(normalized.R || normalized.r);
 
   try {
     WasmBoy.setJoypadState(controllerState);
   } catch {
     // ignore if the emulator is not initialized yet
   }
+}
+
+export function makeJoypadState(activeButtons: Set<string>) {
+  const state: Record<string, boolean> = {
+    UP: false,
+    RIGHT: false,
+    DOWN: false,
+    LEFT: false,
+    A: false,
+    B: false,
+    SELECT: false,
+    START: false,
+    L: false,
+    R: false,
+  };
+
+  for (const button of activeButtons) {
+    if (button === "Up") state.UP = true;
+    if (button === "Right") state.RIGHT = true;
+    if (button === "Down") state.DOWN = true;
+    if (button === "Left") state.LEFT = true;
+    if (button === "A") state.A = true;
+    if (button === "B") state.B = true;
+    if (button === "Select") state.SELECT = true;
+    if (button === "Start") state.START = true;
+    if (button === "L") state.L = true;
+    if (button === "R") state.R = true;
+  }
+
+  return state;
 }
 
 export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
@@ -73,6 +107,14 @@ export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
   }
 
   const canvas = container.querySelector("canvas") ?? document.createElement("canvas");
+  canvas.width = 160;
+  canvas.height = 144;
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  canvas.style.display = "block";
+  canvas.style.objectFit = "contain";
+  canvas.style.imageRendering = "pixelated";
+  canvas.style.background = "#020a02";
   if (!container.contains(canvas)) {
     container.appendChild(canvas);
   }
@@ -83,6 +125,7 @@ export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
 
   (async () => {
     try {
+      console.log("[wasmboy] init start", { romUrl, canvas: !!canvas, cfg });
       await WasmBoy.config(
         {
           isGbcEnabled: cfg.system === "gbc" || cfg.system === "gb",
@@ -93,12 +136,16 @@ export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
         },
         canvas
       );
+      console.log("[wasmboy] config ok");
 
       await WasmBoy.loadROM(romUrl);
+      console.log("[wasmboy] loaded rom");
       WasmBoy.play();
+      console.log("[wasmboy] play called");
       opts.onReady?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load emulator";
+      console.error("[wasmboy] init failed", err);
       opts.onError?.(message);
     }
   })();
@@ -130,7 +177,8 @@ export const KEY_MAP: Record<string, number> = {
   a:          8,   // L
   s:          9,   // R
   Enter:      7,   // Start
-  Backspace:  6,   // Select
+  Shift:      6,   // Select
+  Backspace:  6,   // Select fallback
 };
 
 // ─── Mobile Detection ─────────────────────────────────────────────────────────
