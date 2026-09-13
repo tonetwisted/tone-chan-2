@@ -51,49 +51,24 @@ export default function EmulatorContainer() {
   const [isMobile, setIsMobile] = useState(false);
   const [isError, setIsError] = useState(false);
   const [pressed, setPressed] = useState<Set<string>>(new Set());
-  // Tracks whether we've already dismissed the EmulatorJS "click to resume" overlay
-  const audioUnlocked = useRef(false);
 
   useEffect(() => { setIsMobile(isMobileDevice()); }, []);
 
-  // fromKeyboard=true means a real key was pressed — skip re-dispatching that
-  // same key or we create an infinite loop (our listener catches our own events).
+  // Only route through EmulatorJS's own input API. Dispatching synthetic keyboard
+  // events back into the page creates duplicate input and can cause the control
+  // layer to fight the emulator on mobile and desktop.
   const fireButton = useCallback((btn: string, down: boolean, fromKeyboard = false) => {
     const val = down ? 1 : 0;
     const idx = BTN_TO_INDEX[btn];
-    const type = down ? "keydown" : "keyup";
 
-    // On first on-screen press: click the canvas within this trusted pointer event
-    // so AudioContext unlocks and EmulatorJS dismisses its "click to resume" overlay.
-    if (down && !fromKeyboard && !audioUnlocked.current) {
-      const canvas = document.querySelector("#ejs-player canvas") as HTMLElement | null;
-      if (canvas) {
-        audioUnlocked.current = true;
-        canvas.click();
-      }
-    }
-
-    // Method 1: simulateInput API
     const w = window as unknown as Record<string, unknown>;
     const gm = (w.EJS_emulator as { gameManager?: { simulateInput?: (p: number, b: number, v: number) => void } } | undefined)?.gameManager;
     if (idx !== undefined && gm?.simulateInput) {
       gm.simulateInput(0, idx, val);
     }
 
-    // Method 2: keyboard event fallback (on-screen buttons only — real key presses
-    // already fired a trusted KeyboardEvent; re-dispatching would cause an infinite loop)
-    if (!fromKeyboard) {
-      const key = BTN_TO_KEY[btn];
-      if (key) {
-        const opts = { key, bubbles: true, cancelable: true };
-        document.dispatchEvent(new KeyboardEvent(type, opts));
-        document.querySelectorAll("iframe").forEach((f) => {
-          try {
-            const doc = (f as HTMLIFrameElement).contentDocument;
-            if (doc) doc.dispatchEvent(new KeyboardEvent(type, opts));
-          } catch { /* cross-origin, skip */ }
-        });
-      }
+    if (fromKeyboard) {
+      return;
     }
   }, []);
 
@@ -113,18 +88,13 @@ export default function EmulatorContainer() {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
       const btn = KEY_TO_BTN[e.key];
       if (!btn || e.repeat) return;
-      // Keyboard press is a trusted event — unlock audio on first key press too
-      if (!audioUnlocked.current) {
-        const canvas = document.querySelector("#ejs-player canvas") as HTMLElement | null;
-        if (canvas) { audioUnlocked.current = true; canvas.click(); }
-      }
-      fireButton(btn, true, true); // fromKeyboard=true: skip re-dispatching the key
+      fireButton(btn, true, true);
       setPressed((prev) => new Set(prev).add(btn));
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const btn = KEY_TO_BTN[e.key];
       if (!btn) return;
-      fireButton(btn, false, true); // fromKeyboard=true
+      fireButton(btn, false, true);
       setPressed((prev) => { const next = new Set(prev); next.delete(btn); return next; });
     };
     window.addEventListener("keydown", onKeyDown);

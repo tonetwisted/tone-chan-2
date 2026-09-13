@@ -75,6 +75,9 @@ export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
   w.EJS_mobileControls  = false;   // disable built-in touch overlay (legacy API)
   w.EJS_defaultOptions  = {
     "save-state-location": "keep in browser",
+    "virtual-gamepad": "disabled",
+    "virtual-gamepad-left-handed-mode": "disabled",
+    "menu-bar-button": "hidden",
   };
   w.EJS_Buttons         = {
     playPause: true,
