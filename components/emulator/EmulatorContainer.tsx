@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import GameBoyShell from "./GameBoyShell";
-import { isMobileDevice, supportsWasm } from "@/lib/emulator";
+import { isMobileDevice, setJoypadState, supportsWasm } from "@/lib/emulator";
 
 const EmulatorCanvas = dynamic(() => import("./EmulatorCanvas"), {
   ssr: false,
@@ -54,48 +54,35 @@ export default function EmulatorContainer() {
 
   useEffect(() => { setIsMobile(isMobileDevice()); }, []);
 
-  // Only route through EmulatorJS's own input API. Dispatching synthetic keyboard
-  // events back into the page creates duplicate input and can cause the control
-  // layer to fight the emulator on mobile and desktop.
   const fireButton = useCallback((btn: string, down: boolean, fromKeyboard = false) => {
-    const val = down ? 1 : 0;
-    const idx = BTN_TO_INDEX[btn];
-
-    const w = window as unknown as Record<string, unknown>;
-    const gm = (w.EJS_emulator as { gameManager?: { simulateInput?: (p: number, b: number, v: number) => void } } | undefined)?.gameManager;
-    if (idx !== undefined && gm?.simulateInput) {
-      gm.simulateInput(0, idx, val);
-    }
+    setPressed((prev) => {
+      const next = new Set(prev);
+      if (down) next.add(btn);
+      else next.delete(btn);
+      setJoypadState(next);
+      return next;
+    });
 
     if (fromKeyboard) {
       return;
     }
   }, []);
 
-  // Touch/on-screen button press
   const handleButton = useCallback((btn: string, isDown: boolean) => {
     fireButton(btn, isDown);
-    setPressed((prev) => {
-      const next = new Set(prev);
-      isDown ? next.add(btn) : next.delete(btn);
-      return next;
-    });
   }, [fireButton]);
 
-  // Physical keyboard → fire simulateInput + visual highlight
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
       const btn = KEY_TO_BTN[e.key];
       if (!btn || e.repeat) return;
       fireButton(btn, true, true);
-      setPressed((prev) => new Set(prev).add(btn));
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const btn = KEY_TO_BTN[e.key];
       if (!btn) return;
       fireButton(btn, false, true);
-      setPressed((prev) => { const next = new Set(prev); next.delete(btn); return next; });
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);

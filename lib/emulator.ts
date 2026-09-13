@@ -1,23 +1,9 @@
-/**
- * Emulator integration helpers.
- *
- * Strategy: Use EmulatorJS (https://emulatorjs.org) which wraps mgba for GBA.
- * EmulatorJS is loaded dynamically from /public/emulatorjs/ (self-hosted) or
- * from the CDN. We self-host for performance and reliability.
- *
- * Self-hosting: download the latest release from
- *   https://github.com/EmulatorJS/EmulatorJS/releases
- * and extract it into /public/emulatorjs/
- *
- * Then the only thing you need to do is set window.EJS_* globals and inject
- * the loader script — this module handles that entirely.
- */
-
+import { WasmBoy } from "wasmboy";
 import type { EmulatorConfig, RomConfig, SkinConfig } from "@/types";
 
 export const DEFAULT_EMULATOR_CONFIG: EmulatorConfig = {
-  system: "gbc",       // Game Boy Color (.gbc / .gb files)
-  core: "gambatte",    // gambatte is the GBC core in EmulatorJS
+  system: "gbc",
+  core: "gambatte",
   width: 160,
   height: 144,
   volume: 0.7,
@@ -27,15 +13,12 @@ export const DEFAULT_EMULATOR_CONFIG: EmulatorConfig = {
   skipBios: true,
 };
 
-// 🔧 Rename your .gbc file to match this, or change this path to match your filename
 export const DEMO_ROM: RomConfig = {
   id: "tone-chan-demo",
   filename: "tone-chan-demo.gbc",
   path: "/roms/tone-chan-demo.gbc",
   isDemo: true,
 };
-
-// ─── EmulatorJS Loader ────────────────────────────────────────────────────────
 
 export interface EmulatorJSOptions {
   containerId: string;
@@ -46,115 +29,92 @@ export interface EmulatorJSOptions {
   onError?: (err: string) => void;
 }
 
-/**
- * Initialize the EmulatorJS runtime inside `containerId`.
- * Returns a cleanup function that removes the injected script.
- */
+export function setJoypadState(activeButtons: Iterable<string> | Record<string, boolean>) {
+  const controllerState = {
+    UP: false,
+    RIGHT: false,
+    DOWN: false,
+    LEFT: false,
+    A: false,
+    B: false,
+    SELECT: false,
+    START: false,
+  };
+
+  const normalized =
+    typeof (activeButtons as Record<string, boolean>)?.UP === "boolean"
+      ? (activeButtons as Record<string, boolean>)
+      : Object.fromEntries(Array.from(activeButtons as Iterable<string>).map((button) => [button, true]));
+
+  controllerState.UP = Boolean(normalized.UP || normalized.Up);
+  controllerState.RIGHT = Boolean(normalized.RIGHT || normalized.Right);
+  controllerState.DOWN = Boolean(normalized.DOWN || normalized.Down);
+  controllerState.LEFT = Boolean(normalized.LEFT || normalized.Left);
+  controllerState.A = Boolean(normalized.A || normalized.a);
+  controllerState.B = Boolean(normalized.B || normalized.b);
+  controllerState.SELECT = Boolean(normalized.SELECT || normalized.Select);
+  controllerState.START = Boolean(normalized.START || normalized.Start);
+
+  try {
+    WasmBoy.setJoypadState(controllerState);
+  } catch {
+    // ignore if the emulator is not initialized yet
+  }
+}
+
 export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
   const cfg = { ...DEFAULT_EMULATOR_CONFIG, ...opts.config };
 
-  const localLoaderUrl = "/emulatorjs/loader.js";
-  const localDataPath = "/emulatorjs/";
-  const fallbackLoaderUrl = "https://cdn.emulatorjs.org/stable/data/loader.js";
-
-  // Set EmulatorJS global config vars
-  const w = window as unknown as Record<string, unknown>;
-  w.EJS_player          = `#${opts.containerId}`;
-  w.EJS_gameName        = "Tone Chan Adventures";
-  // Must be an absolute URL — EmulatorJS iframe resolves relative paths against
-  // the asset root that `EJS_pathtodata` points to.
-  w.EJS_gameUrl         = opts.romPath.startsWith("http")
-    ? opts.romPath
-    : `${window.location.origin}${opts.romPath}`;
-  w.EJS_core            = cfg.core;
-  // Self-hosted production bundle lives at /public/emulatorjs/.
-  w.EJS_pathtodata      = localDataPath;
-  w.EJS_startOnLoaded   = true;
-  w.EJS_volume          = cfg.volume;
-  w.EJS_VirtualGamepad  = false;   // disable built-in touch overlay (new API)
-  w.EJS_mobileControls  = false;   // disable built-in touch overlay (legacy API)
-  w.EJS_defaultOptions  = {
-    "save-state-location": "keep in browser",
-    "virtual-gamepad": "disabled",
-    "virtual-gamepad-left-handed-mode": "disabled",
-    "menu-bar-button": "hidden",
-    "menu-bar": "disabled",
-    "disable-gamepad": true,
-  };
-  w.EJS_Buttons         = {
-    playPause: false,
-    restart: false,
-    mute: false,
-    settings: false,
-    fullscreen: false,
-    saveState: false,
-    loadState: false,
-    screenRecord: false,
-    gamepad: false,
-    cheat: false,
-    volume: false,
-    saveSavFiles: false,
-    loadSavFiles: false,
-    quickSave: false,
-    quickLoad: false,
-    screenshot: false,
-    cacheManager: false,
-  };
-
-  const hideOverlayStyle = document.getElementById("emulatorjs-hide-overlay");
-  if (!hideOverlayStyle) {
-    const style = document.createElement("style");
-    style.id = "emulatorjs-hide-overlay";
-    style.textContent = `
-      .ejs_menu,
-      .ejs_menu_bar,
-      .ejs-virtualGamepad,
-      .ejs_virtualGamepad,
-      [class*="virtualGamepad"],
-      [id*="virtualGamepad"],
-      [class*="menu-bar"],
-      [class*="ejs_menu"],
-      [class*="controlSettings"],
-      .ejs_touchControls {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-      }
-    `;
-    document.head.appendChild(style);
+  const container = document.getElementById(opts.containerId);
+  if (!container) {
+    const error = "Emulator container not found.";
+    opts.onError?.(error);
+    return () => {};
   }
 
-  if (opts.onReady)  w.EJS_onGameStart = opts.onReady;
-  if (opts.onError)  w.EJS_onLoadError = opts.onError;
+  const canvas = container.querySelector("canvas") ?? document.createElement("canvas");
+  if (!container.contains(canvas)) {
+    container.appendChild(canvas);
+  }
 
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = localLoaderUrl;
+  const romUrl = opts.romPath.startsWith("http")
+    ? opts.romPath
+    : `${window.location.origin}${opts.romPath}`;
 
-  const tryFallbackLoader = () => {
-    if (script.src === fallbackLoaderUrl) return;
-    script.src = fallbackLoaderUrl;
-    script.onerror = () => {
-      if (opts.onError) opts.onError("EmulatorJS loader failed to load.");
-    };
-    document.body.appendChild(script);
-  };
+  (async () => {
+    try {
+      await WasmBoy.config(
+        {
+          isGbcEnabled: cfg.system === "gbc" || cfg.system === "gb",
+          gameboyFrameRate: cfg.fps,
+          isAudioEnabled: true,
+          enableBootROMIfAvailable: false,
+          headless: false,
+        },
+        canvas
+      );
 
-  script.onerror = () => tryFallbackLoader();
-  document.body.appendChild(script);
+      await WasmBoy.loadROM(romUrl);
+      WasmBoy.play();
+      opts.onReady?.();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to load emulator";
+      opts.onError?.(message);
+    }
+  })();
 
   return () => {
     try {
-      document.body.removeChild(script);
+      WasmBoy.pause();
     } catch {
-      // ignore if the loader already detached
+      // ignore cleanup races
     }
-    const style = document.getElementById("emulatorjs-hide-overlay");
-    if (style) style.remove();
-    // Clean EJS globals
-    const keys = Object.keys(w).filter((k) => k.startsWith("EJS_"));
-    keys.forEach((k) => delete w[k]);
+    try {
+      const canvasEl = container.querySelector("canvas");
+      if (canvasEl) canvasEl.remove();
+    } catch {
+      // ignore cleanup races
+    }
   };
 }
 
