@@ -53,19 +53,22 @@ export interface EmulatorJSOptions {
 export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
   const cfg = { ...DEFAULT_EMULATOR_CONFIG, ...opts.config };
 
+  const localLoaderUrl = "/emulatorjs/loader.js";
+  const localDataPath = "/emulatorjs/";
+  const fallbackLoaderUrl = "https://cdn.emulatorjs.org/stable/data/loader.js";
+
   // Set EmulatorJS global config vars
   const w = window as unknown as Record<string, unknown>;
   w.EJS_player          = `#${opts.containerId}`;
   w.EJS_gameName        = "Tone Chan Adventures";
-  // Must be an absolute URL — EmulatorJS CDN iframe resolves relative paths
-  // against cdn.emulatorjs.org, not our site.
+  // Must be an absolute URL — EmulatorJS iframe resolves relative paths against
+  // the asset root that `EJS_pathtodata` points to.
   w.EJS_gameUrl         = opts.romPath.startsWith("http")
     ? opts.romPath
     : `${window.location.origin}${opts.romPath}`;
   w.EJS_core            = cfg.core;
-  // Use CDN — no local install required.
-  // Swap to "/emulatorjs/data/" if you self-host later.
-  w.EJS_pathtodata      = "https://cdn.emulatorjs.org/stable/data/";
+  // Self-hosted production bundle lives at /public/emulatorjs/.
+  w.EJS_pathtodata      = localDataPath;
   w.EJS_startOnLoaded   = true;
   w.EJS_volume          = cfg.volume;
   w.EJS_VirtualGamepad  = false;   // disable built-in touch overlay (new API)
@@ -96,14 +99,28 @@ export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
   if (opts.onReady)  w.EJS_onGameStart = opts.onReady;
   if (opts.onError)  w.EJS_onLoadError = opts.onError;
 
-  // Inject the loader script from CDN
   const script = document.createElement("script");
-  script.src   = "https://cdn.emulatorjs.org/stable/data/loader.js";
   script.async = true;
+  script.src = localLoaderUrl;
+
+  const tryFallbackLoader = () => {
+    if (script.src === fallbackLoaderUrl) return;
+    script.src = fallbackLoaderUrl;
+    script.onerror = () => {
+      if (opts.onError) opts.onError("EmulatorJS loader failed to load.");
+    };
+    document.body.appendChild(script);
+  };
+
+  script.onerror = () => tryFallbackLoader();
   document.body.appendChild(script);
 
   return () => {
-    document.body.removeChild(script);
+    try {
+      document.body.removeChild(script);
+    } catch {
+      // ignore if the loader already detached
+    }
     // Clean EJS globals
     const keys = Object.keys(w).filter((k) => k.startsWith("EJS_"));
     keys.forEach((k) => delete w[k]);

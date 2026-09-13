@@ -8,15 +8,22 @@ const nextConfig: NextConfig = {
   },
   headers: async () => [
     {
-      // Apply COOP/COEP to ALL pages — required for EmulatorJS SharedArrayBuffer
-      source: "/(.*)",
+      // EmulatorJS needs this only on the actual play route, not on the whole app.
+      source: "/play",
       headers: [
         { key: "Cross-Origin-Opener-Policy",   value: "same-origin" },
         { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
       ],
     },
     {
-      // Allow the CDN to fetch the ROM file cross-origin
+      source: "/play/:path*",
+      headers: [
+        { key: "Cross-Origin-Opener-Policy",   value: "same-origin" },
+        { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
+      ],
+    },
+    {
+      // Allow the ROM files to be fetched by the emulator runtime.
       source: "/roms/:path*",
       headers: [
         { key: "Access-Control-Allow-Origin", value: "*" },
