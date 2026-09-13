@@ -37,5 +37,6 @@ next-env.d.ts
 /public/roms/*.gba
 /public/roms/*.gb
 
-# EmulatorJS (self-hosted, too large for git)
-/public/emulatorjs/
+# Keep the self-hosted EmulatorJS bundle in the repo so it can be deployed.
+!/public/emulatorjs/
+!/public/emulatorjs/**
