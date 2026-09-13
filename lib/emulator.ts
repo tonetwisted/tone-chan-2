@@ -78,26 +78,52 @@ export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
     "virtual-gamepad": "disabled",
     "virtual-gamepad-left-handed-mode": "disabled",
     "menu-bar-button": "hidden",
+    "menu-bar": "disabled",
+    "disable-gamepad": true,
   };
   w.EJS_Buttons         = {
-    playPause: true,
-    restart: true,
-    mute: true,
-    settings: true,
-    fullscreen: true,
-    saveState: cfg.saveStateEnabled,
-    loadState: cfg.saveStateEnabled,
+    playPause: false,
+    restart: false,
+    mute: false,
+    settings: false,
+    fullscreen: false,
+    saveState: false,
+    loadState: false,
     screenRecord: false,
-    gamepad: true,
-    cheat: cfg.cheatsEnabled,
-    volume: true,
-    saveSavFiles: true,
-    loadSavFiles: true,
-    quickSave: cfg.saveStateEnabled,
-    quickLoad: cfg.saveStateEnabled,
+    gamepad: false,
+    cheat: false,
+    volume: false,
+    saveSavFiles: false,
+    loadSavFiles: false,
+    quickSave: false,
+    quickLoad: false,
     screenshot: false,
     cacheManager: false,
   };
+
+  const hideOverlayStyle = document.getElementById("emulatorjs-hide-overlay");
+  if (!hideOverlayStyle) {
+    const style = document.createElement("style");
+    style.id = "emulatorjs-hide-overlay";
+    style.textContent = `
+      .ejs_menu,
+      .ejs_menu_bar,
+      .ejs-virtualGamepad,
+      .ejs_virtualGamepad,
+      [class*="virtualGamepad"],
+      [id*="virtualGamepad"],
+      [class*="menu-bar"],
+      [class*="ejs_menu"],
+      [class*="controlSettings"],
+      .ejs_touchControls {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   if (opts.onReady)  w.EJS_onGameStart = opts.onReady;
   if (opts.onError)  w.EJS_onLoadError = opts.onError;
@@ -124,6 +150,8 @@ export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
     } catch {
       // ignore if the loader already detached
     }
+    const style = document.getElementById("emulatorjs-hide-overlay");
+    if (style) style.remove();
     // Clean EJS globals
     const keys = Object.keys(w).filter((k) => k.startsWith("EJS_"));
     keys.forEach((k) => delete w[k]);
