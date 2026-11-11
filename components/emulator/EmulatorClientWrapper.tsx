@@ -19,6 +19,19 @@ const KEY_TO_BUTTON: Record<string, string> = {
   KeyZ: "B",
 };
 
+// EmulatorJS's standard RetroPad input indices for the "gb" control scheme
+// (see EmulatorJS src/emulator.js getControlScheme() === "gb" button list).
+const BUTTON_TO_INPUT_INDEX: Record<string, number> = {
+  B: 0,
+  Select: 2,
+  Start: 3,
+  Up: 4,
+  Down: 5,
+  Left: 6,
+  Right: 7,
+  A: 8,
+};
+
 type EmulatorWindow = Window & {
   EJS_player?: string;
   EJS_gameName?: string;
@@ -30,6 +43,12 @@ type EmulatorWindow = Window & {
   EJS_mobileControls?: boolean;
   EJS_defaultOptions?: Record<string, string>;
   EJS_Buttons?: Record<string, boolean | string>;
+  EJS_onGameStart?: () => void;
+  EJS_emulator?: {
+    gameManager?: {
+      simulateInput: (player: number, index: number, value: number) => void;
+    };
+  };
 };
 
 export default function EmulatorClientWrapper() {
@@ -37,23 +56,6 @@ export default function EmulatorClientWrapper() {
   const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
-
-  const sendKey = useCallback((code: string, key: string, down: boolean) => {
-    const type = down ? "keydown" : "keyup";
-    const opts = { code, key, bubbles: true, cancelable: true } as KeyboardEventInit;
-
-    document.dispatchEvent(new KeyboardEvent(type, opts));
-
-    document.querySelectorAll("iframe").forEach((frame) => {
-      try {
-        if (frame.contentDocument) {
-          frame.contentDocument.dispatchEvent(new KeyboardEvent(type, opts));
-        }
-      } catch {
-        // Cross-origin iframe is ignored safely.
-      }
-    });
-  }, []);
 
   const handleButton = useCallback((btn: string, pressed: boolean) => {
     setPressedButtons((prev) => {
@@ -63,15 +65,20 @@ export default function EmulatorClientWrapper() {
       return next;
     });
 
-    if (btn === "Up") sendKey("ArrowUp", "ArrowUp", pressed);
-    else if (btn === "Down") sendKey("ArrowDown", "ArrowDown", pressed);
-    else if (btn === "Left") sendKey("ArrowLeft", "ArrowLeft", pressed);
-    else if (btn === "Right") sendKey("ArrowRight", "ArrowRight", pressed);
-    else if (btn === "A") sendKey("KeyX", "x", pressed);
-    else if (btn === "B") sendKey("KeyZ", "z", pressed);
-    else if (btn === "Start") sendKey("Enter", "Enter", pressed);
-    else if (btn === "Select") sendKey("ShiftLeft", "Shift", pressed);
-  }, [sendKey]);
+    const index = BUTTON_TO_INPUT_INDEX[btn];
+    if (index === undefined) return;
+
+    // Call EmulatorJS's own input API directly — the same one its built-in
+    // touch/gamepad controls use — instead of faking keyboard events. This
+    // works identically for pointer taps (mobile) and clicks/physical keys
+    // (desktop) and doesn't depend on DOM focus or synthetic KeyboardEvent
+    // quirks (e.g. `keyCode` being unreliable on constructed events).
+    try {
+      (window as EmulatorWindow).EJS_emulator?.gameManager?.simulateInput(0, index, pressed ? 1 : 0);
+    } catch {
+      // Emulator isn't loaded yet; ignore.
+    }
+  }, []);
 
   useEffect(() => {
     const parent = gameParentRef.current;
@@ -98,16 +105,19 @@ export default function EmulatorClientWrapper() {
       win.EJS_VirtualGamepad = false;
       win.EJS_mobileControls = false;
       win.EJS_defaultOptions = {
-        keyboardInput: "enabled",
+        // "Direct Keyboard Input" forwards raw keys to the emulated machine
+        // and, when enabled, EmulatorJS skips its own button-mapping entirely
+        // — that's what was swallowing every control (including Start).
+        keyboardInput: "disabled",
         altKeyboardInput: "disabled",
         lockMouse: "disabled",
       };
       win.EJS_Buttons = {
         playPause: false,
         restart: false,
-        mute: true,
+        mute: false,
         settings: false,
-        fullscreen: true,
+        fullscreen: false,
         saveState: false,
         loadState: false,
         screenRecord: false,
@@ -120,7 +130,13 @@ export default function EmulatorClientWrapper() {
         quickLoad: false,
         screenshot: false,
         cacheManager: false,
+        exitEmulation: false,
       };
+      // "ready" only means EmulatorJS's own UI initialized; the core/ROM is
+      // still downloading and simulateInput() is a no-op until "start" fires
+      // (this.started = true inside emulator.js) — that's the accurate
+      // signal that button presses will actually reach the game.
+      win.EJS_onGameStart = () => setIsReady(true);
 
       const loaderScriptId = "emulatorjs-loader";
       let loaderScript = document.getElementById(loaderScriptId) as HTMLScriptElement | null;
@@ -130,17 +146,8 @@ export default function EmulatorClientWrapper() {
         loaderScript.id = loaderScriptId;
         loaderScript.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
         loaderScript.async = true;
-        loaderScript.onload = () => {
-          setIsReady(true);
-          const canvas = document.querySelector("#game canvas");
-          if (canvas) {
-            (canvas as HTMLElement).click();
-          }
-        };
         loaderScript.onerror = () => setError("EmulatorJS failed to load.");
         document.body.appendChild(loaderScript);
-      } else {
-        setIsReady(true);
       }
     };
 

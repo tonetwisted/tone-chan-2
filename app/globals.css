@@ -142,6 +142,15 @@ body {
   display: none !important;
 }
 
+/* Hide EmulatorJS's own toolbar (volume, context menu, fullscreen, exit) —
+   its "contextMenu" button can't be turned off via EJS_Buttons config, so it
+   must be removed with CSS. We use our own GameBoyShell controls instead. */
+.ejs_menu_bar,
+.ejs_context_menu {
+  display: none !important;
+  pointer-events: none !important;
+}
+
 /* ── Focus styles ─────────────────────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--tc-cyan);
