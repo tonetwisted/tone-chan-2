@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
+import PWARegister from "@/components/pwa/PWARegister";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tonechanadventures.com";
 
@@ -13,12 +14,22 @@ export const metadata: Metadata = {
   description:
     "A retro Game Boy Advance-inspired action adventure — play the demo free in your browser. Pixel art, anime storytelling, and original music by Tone Chan.",
   keywords: [
-    "Tone Chan Adventures", "GBA game", "browser game", "pixel art",
-    "indie game", "anime game", "retro game", "play online", "emulator",
-    "Game Boy Advance", "streetwear game",
+    "Tone Chan Adventures",
+    "GBA game",
+    "browser game",
+    "pixel art",
+    "indie game",
+    "anime game",
+    "retro game",
+    "play online",
+    "emulator",
+    "Game Boy Advance",
+    "streetwear game",
   ],
   authors: [{ name: "Tone Chan Studios" }],
   creator: "Tone Chan Studios",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#0f1022",
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -49,8 +60,13 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icons/icon-192.png",
     apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Tone Chan",
   },
 };
 
@@ -62,11 +78,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+        <meta name="theme-color" content="#0f1022" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className="bg-tc-black text-tc-cream antialiased">
+        <PWARegister />
         {children}
         <Analytics />
       </body>

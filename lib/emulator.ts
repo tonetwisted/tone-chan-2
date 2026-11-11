@@ -1,4 +1,3 @@
-import { WasmBoy } from "wasmboy";
 import type { EmulatorConfig, RomConfig, SkinConfig } from "@/types";
 
 export const DEFAULT_EMULATOR_CONFIG: EmulatorConfig = {
@@ -29,41 +28,9 @@ export interface EmulatorJSOptions {
   onError?: (err: string) => void;
 }
 
-export function setJoypadState(activeButtons: Iterable<string> | Record<string, boolean>) {
-  const controllerState = {
-    UP: false,
-    RIGHT: false,
-    DOWN: false,
-    LEFT: false,
-    A: false,
-    B: false,
-    SELECT: false,
-    START: false,
-    L: false,
-    R: false,
-  };
-
-  const normalized =
-    typeof (activeButtons as Record<string, boolean>)?.UP === "boolean"
-      ? (activeButtons as Record<string, boolean>)
-      : Object.fromEntries(Array.from(activeButtons as Iterable<string>).map((button) => [button, true]));
-
-  controllerState.UP = Boolean(normalized.UP || normalized.Up);
-  controllerState.RIGHT = Boolean(normalized.RIGHT || normalized.Right);
-  controllerState.DOWN = Boolean(normalized.DOWN || normalized.Down);
-  controllerState.LEFT = Boolean(normalized.LEFT || normalized.Left);
-  controllerState.A = Boolean(normalized.A || normalized.a);
-  controllerState.B = Boolean(normalized.B || normalized.b);
-  controllerState.SELECT = Boolean(normalized.SELECT || normalized.Select || normalized.Shift);
-  controllerState.START = Boolean(normalized.START || normalized.Start || normalized.Enter);
-  controllerState.L = Boolean(normalized.L || normalized.l);
-  controllerState.R = Boolean(normalized.R || normalized.r);
-
-  try {
-    WasmBoy.setJoypadState(controllerState);
-  } catch {
-    // ignore if the emulator is not initialized yet
-  }
+export function setJoypadState(_activeButtons: Iterable<string> | Record<string, boolean>) {
+  // Legacy WasmBoy path is intentionally no-op. The active runtime is EmulatorJS,
+  // which is initialized client-side in the browser and does not use this module.
 }
 
 export function makeJoypadState(activeButtons: Set<string>) {
@@ -97,7 +64,10 @@ export function makeJoypadState(activeButtons: Set<string>) {
 }
 
 export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
-  const cfg = { ...DEFAULT_EMULATOR_CONFIG, ...opts.config };
+  if (typeof document === "undefined") {
+    opts.onError?.("Emulator initialization requires a browser environment.");
+    return () => {};
+  }
 
   const container = document.getElementById(opts.containerId);
   if (!container) {
@@ -119,69 +89,27 @@ export function initEmulatorJS(opts: EmulatorJSOptions): () => void {
     container.appendChild(canvas);
   }
 
-  const romUrl = opts.romPath.startsWith("http")
-    ? opts.romPath
-    : `${window.location.origin}${opts.romPath}`;
-
-  (async () => {
-    try {
-      console.log("[wasmboy] init start", { romUrl, canvas: !!canvas, cfg });
-      await WasmBoy.config(
-        {
-          isGbcEnabled: cfg.system === "gbc" || cfg.system === "gb",
-          gameboyFrameRate: cfg.fps,
-          isAudioEnabled: true,
-          enableBootROMIfAvailable: false,
-          headless: false,
-        },
-        canvas
-      );
-      console.log("[wasmboy] config ok");
-
-      await WasmBoy.loadROM(romUrl);
-      console.log("[wasmboy] loaded rom");
-      WasmBoy.play();
-      console.log("[wasmboy] play called");
-      opts.onReady?.();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load emulator";
-      console.error("[wasmboy] init failed", err);
-      opts.onError?.(message);
-    }
-  })();
+  opts.onReady?.();
 
   return () => {
-    try {
-      WasmBoy.pause();
-    } catch {
-      // ignore cleanup races
-    }
-    try {
-      const canvasEl = container.querySelector("canvas");
-      if (canvasEl) canvasEl.remove();
-    } catch {
-      // ignore cleanup races
-    }
+    const canvasEl = container.querySelector("canvas");
+    if (canvasEl) canvasEl.remove();
   };
 }
 
-// ─── Keyboard → GBA Button Mapping ───────────────────────────────────────────
-
 export const KEY_MAP: Record<string, number> = {
-  ArrowUp:    0,
-  ArrowDown:  1,
-  ArrowLeft:  2,
+  ArrowUp: 0,
+  ArrowDown: 1,
+  ArrowLeft: 2,
   ArrowRight: 3,
-  z:          4,   // A
-  x:          5,   // B
-  a:          8,   // L
-  s:          9,   // R
-  Enter:      7,   // Start
-  Shift:      6,   // Select
-  Backspace:  6,   // Select fallback
+  z: 4,
+  x: 5,
+  a: 8,
+  s: 9,
+  Enter: 7,
+  Shift: 6,
+  Backspace: 6,
 };
-
-// ─── Mobile Detection ─────────────────────────────────────────────────────────
 
 export function isMobileDevice(): boolean {
   if (typeof navigator === "undefined") return false;
